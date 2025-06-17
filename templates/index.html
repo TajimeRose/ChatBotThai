@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI for lonely people</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        /* พื้นหลังเว็บไซต์ */
+        body {
+    background-color: #DFDBE5;
+    
+    background-size: cover; /* ปรับขนาดรูปให้ครอบคลุมพื้นที่ */
+    background-position: center; /* จัดตำแหน่งตรงกลาง */
+    background-repeat: no-repeat; /* ไม่ให้รูปซ้ำ */
+    min-height: 100vh;
+    margin: 0;
+    padding: 0;
+        }
+
+
+
+        /* แก้ไข CSS สำหรับ Navbar */
+        .nav-container {
+               display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 20px;
+            background: linear-gradient(45deg, #4400ff, #9500ff);
+         
+        }
+        
+        
+
+        /* แก้ไขส่วนของลิงก์ด้านขวา */
+        .nav-right a {
+            margin-left: 15px;
+            text-decoration: none;
+            color: #ffffff;
+            font-weight: bold;
+        }
+
+        /* แก้ไขส่วนของรูปด้านซ้าย */
+        .nav-left .profile-img {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 2px solid #ccc;
+            display: block; /* เพิ่มเพื่อให้แน่ใจว่ารูปแสดงผล */
+        }
+         รูปโปรไฟล์ AI */
+        .ai-avatar {
+            width: 120px;
+            height: 120px;
+            margin: 20px auto;
+            border-radius: 50%;
+        } 
+
+        /* กล่องแชททั้งหมด */
+        .chat-container {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #ffffff;
+            border-radius: 0 0 8px 8px;
+            box-shadow: 0 4px 6px rgba(99, 102, 241, 0.1);
+        }
+
+        /* พื้นที่แสดงข้อความแชท */
+        .chat-messages {
+            height: 600px;
+            overflow-y: auto;
+            padding: 20px;
+            background-color: #f8f9fa;
+        }
+
+        /* สไตล์ข้อความทั่วไป */
+        .message {
+            padding: 10px 15px;
+            margin-bottom: 10px;
+            border-radius: 15px;
+            max-width: 70%;
+            word-wrap: break-word;
+            clear: both;
+        }
+
+        /* ข้อความผู้ใช้ */
+        .message.user {
+            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+            color: white;
+            float: right;
+        }
+
+        /* ข้อความ AI */
+        .message.response {
+            background: linear-gradient(135deg, #e8eaff 0%, #f5f7ff 100%);
+            color: #1f2937;
+            float: left;
+        }
+
+        /* พื้นที่ป้อนข้อความ */
+        .input-area {
+            padding: 10px;
+            border-top: 1px solid #e5e7eb;
+        }
+
+        /* ข้อความแจ้งเตือน */
+        #error-message {
+            color: #ef4444;
+            margin-top: 10px;
+            display: none;
+        }
+
+        /* ปุ่มส่งข้อความ */
+        .btn-primary {
+            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+            border: none;
+        }
+
+        /* ปุ่มส่งข้อความเมื่อโฮเวอร์ */
+        .btn-primary:hover {
+            background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%);
+        }
+    </style>
+</head>
+<body>
+ <!-- แก้ไขโครงสร้าง Navbar -->
+ <div class="nav-container">
+    <div class="nav-left">
+        <img src="{{ url_for('static', filename='img/DALLE.png') }}" 
+                 alt="Logo" 
+                 height="30px"
+                 width="30px" 
+                 class="d-inline-block align-text-top">
+    </div>
+    <div class="nav-right">
+        <a href="#">หน้าแรก</a>
+        <a href="/isc">เครดิต</a>
+    </div>
+</div>
+    <!--
+    <!-- รูปโปรไฟล์ AI -->
+    <div class="ai-avatar">
+        
+    </div>
+    
+    <!-- ส่วนแชท -->
+    <div class="chat-container">
+        <div class="chat-messages" id="chatMessages"></div>
+        <div class="input-area">
+            <form id="messageForm" onsubmit="return sendMessage(event)">
+                <div class="input-group">
+                    <input type="text" id="messageInput" class="form-control" placeholder="พิมพ์ข้อความของคุณที่นี่...">
+                    <button type="submit" class="btn btn-primary">ส่ง</button>
+                </div>
+            </form>
+            <div id="error-message"></div>
+        </div>
+    </div>
+
+    <script>
+        // ดึงอ้างอิงองค์ประกอบ DOM
+        const messageForm = document.getElementById('messageForm');
+        const messageInput = document.getElementById('messageInput');
+        const chatMessages = document.getElementById('chatMessages');
+        const errorMessage = document.getElementById('error-message');
+
+        // ฟังก์ชันส่งข้อความ
+        async function sendMessage(event) {
+            event.preventDefault();
+            const message = messageInput.value.trim();
+            
+            // ตรวจสอบข้อความว่าง
+            if (!message) {
+                showError('กรุณาพิมพ์ข้อความ');
+                return false;
+            }
+
+            // แสดงข้อความผู้ใช้
+            addMessage(message, 'user');
+            messageInput.value = '';
+            
+            try {
+                // ส่งข้อความไป API
+                const response = await fetch('/api', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ message: message })
+                });
+
+                // ตรวจสอบการตอบกลับ
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const data = await response.json();
+                
+                // แสดงข้อความตอบกลับ
+                if (data.response) {
+                    addMessage(data.response, 'response');
+                } else {
+                    showError('ไม่ได้รับการตอบกลับจากระบบ');
+                }
+
+            } catch (error) {
+                console.error('Error:', error);
+                showError('ไม่สามารถส่งข้อความได้ กรุณาลองใหม่อีกครั้ง');
+            }
+
+            return false;
+        }
+
+        // ฟังก์ชันเพิ่มข้อความในแชท
+        function addMessage(content, type) {
+            const messageDiv = document.createElement('div');
+            messageDiv.classList.add('message', type);
+            messageDiv.textContent = content;
+            chatMessages.appendChild(messageDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        // ฟังก์ชันแสดงข้อความแจ้งเตือน
+        function showError(message) {
+            errorMessage.textContent = message;
+            errorMessage.style.display = 'block';
+            setTimeout(() => {
+                errorMessage.style.display = 'none';
+            }, 3000);
+        }
+
+        // รับฟังอีเวนต์การกดปุ่ม Enter
+        messageInput.addEventListener('keypress', function(event) {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                sendMessage(event);
+            }
+        });
+
+        // แสดงข้อความต้อนรับเมื่อโหลดหน้า
+        window.addEventListener('load', () => {
+            addMessage('สวัสดีค่ะ ยินดีต้อนรับสู่ AI For Lonely People! เป็น Ai สำหรับคุยเล่นแก้เหงาและเพื่อนเล่นหรือผูัช่วยเรื่องต่างๆ มีอะไรให้ช่วยไหมคะ?', 'response');
+        });
+    </script>
+</body>
+</html>
